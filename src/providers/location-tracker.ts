@@ -1,29 +1,23 @@
-import { Injectable, NgZone } from '@angular/core';
-import { Http } from '@angular/http';
+import { Injectable, NgZone, ViewChild, ElementRef } from '@angular/core';
 import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
 import { Geolocation, Geoposition } from '@ionic-native/geolocation';
 import 'rxjs/add/operator/filter';
 
-/*
-  Generated class for the LocationTracker provider.
+declare var google;
 
-  See https://angular.io/docs/ts/latest/guide/dependency-injection.html
-  for more info on providers and Angular 2 DI.
-*/
 @Injectable()
 export class LocationTracker {
-
   public watch: any;
   public lat: number = 0;
   public lng: number = 0;
 
   constructor(public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation) {
-    console.log('Hello LocationTracker Provider');
+
   }
 
-  startTracking() {
+  updateMarker(map) {
 // Background Tracking
- 
+ console.log(map);
   let config = {
     desiredAccuracy: 0,
     stationaryRadius: 20,
@@ -33,10 +27,6 @@ export class LocationTracker {
   };
  
   this.backgroundGeolocation.configure(config).subscribe((location) => {
- 
-    console.log('BackgroundGeolocation:  ' + location.latitude + ',' + location.longitude);
- 
-    // Run update inside of Angular's zone
     this.zone.run(() => {
       this.lat = location.latitude;
       this.lng = location.longitude;
@@ -48,11 +38,7 @@ export class LocationTracker {
  
   });
  
-  // Turn ON the background-geolocation system.
   this.backgroundGeolocation.start();
-  
-  
-    // Foreground Tracking
   
   let options = {
     frequency: 3000, 
@@ -63,21 +49,17 @@ export class LocationTracker {
   
     console.log(position);
   
-    // Run update inside of Angular's zone
     this.zone.run(() => {
       this.lat = position.coords.latitude;
       this.lng = position.coords.longitude;
+      let marker = new google.maps.Marker({
+        map: map,
+        animation: google.maps.Animation.DROP,
+        position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude)
+      });
     });
   
   });
   
   }
-
-  stopTracking() {
-    console.log('stopTracking');
-  
-    this.backgroundGeolocation.finish();
-    this.watch.unsubscribe();
-  }
-
 }
