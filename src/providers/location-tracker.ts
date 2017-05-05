@@ -15,9 +15,9 @@ export class LocationTracker {
 
   }
 
-  updateMarker(map) {
+  updateMarker(marker) {
 // Background Tracking
- console.log(map);
+ console.log(marker);
   let config = {
     desiredAccuracy: 0,
     stationaryRadius: 20,
@@ -52,11 +52,7 @@ export class LocationTracker {
     this.zone.run(() => {
       this.lat = position.coords.latitude;
       this.lng = position.coords.longitude;
-      let marker = new google.maps.Marker({
-        map: map,
-        animation: google.maps.Animation.DROP,
-        position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude)
-      });
+      marker.setPosition({lat: position.coords.latitude , lng: position.coords.longitude});
     });
   
   });

@@ -32,7 +32,12 @@ export class HomePage {
     }
 
     this.map = new google.maps.Map(this.mapElement.nativeElement, mapOptions);
-    this.locationTracker.updateMarker(this.map);
+      let marker = new google.maps.Marker({
+        map: this.map,
+        animation: google.maps.Animation.DROP,
+        position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude)
+      });
+    this.locationTracker.updateMarker(marker);
     }, (err) => {
       console.log(err);
     });
