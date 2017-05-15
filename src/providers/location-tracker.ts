@@ -17,7 +17,6 @@ export class LocationTracker {
 
   updateMarker(marker) {
 // Background Tracking
- console.log(marker);
   let config = {
     desiredAccuracy: 0,
     stationaryRadius: 20,
@@ -54,8 +53,12 @@ export class LocationTracker {
       this.lng = position.coords.longitude;
       marker.setPosition({lat: position.coords.latitude , lng: position.coords.longitude});
     });
-  
   });
   
+}
+
+  returnPos()
+  {
+    return 'test';
   }
 }
