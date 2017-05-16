@@ -6,6 +6,7 @@ import { Http } from '@angular/http';
 import 'rxjs/add/operator/map';
 
 declare var google;
+declare var H;
 
 @Component({
   selector: 'page-home',
@@ -20,13 +21,17 @@ export class HomePage {
   public watch: any;
   public lat: number = 0;
   public lng: number = 0;
+  platform: any;
 
   constructor(private http: Http, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation) {
-
+    this.platform = new H.service.Platform({
+      'app_id': 'wAjra6V7CcDCPY6Nf1vK',
+      'app_code': '6vgqJ29azm2D7KVB3QbTFQ'
+    });
   }
 
   ionViewDidLoad(){
-    this.loadMap();
+    this.loadHereMap();
   }
 
   updateMarker(marker) {
@@ -68,6 +73,76 @@ export class HomePage {
   });
   
 }
+
+  loadHereMap() {
+    this.geolocation.getCurrentPosition().then((position) => {
+      console.log(position);
+     let maptypes = this.platform.createDefaultLayers();
+     this.map = new H.Map(
+       this.mapElement.nativeElement,
+       maptypes.satellite.map,
+        {   
+          zoom: 18,
+          center: { lng: position.coords.longitude, lat: position.coords.latitude }
+        }
+     );
+     let behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(this.map))
+     let marker = new H.map.Marker({lat: position.coords.latitude, lng: position.coords.longitude});
+     this.map.addObject(marker);
+     this.updateMarker(marker);
+     this.addParkingMarker(this.map);
+    });
+  }
+
+  addParkingMarker(map) {
+    let iconUrl = new H.map.Icon('https://maps.google.com/mapfiles/kml/shapes/parking_lot_maps.png');
+    let spaces = [
+              {
+                position:{lat: 14.829424, lng: 120.281571},
+                content : 'Parking 1',
+              },
+              {
+                position: {lat: 14.829389, lng: 120.281588},
+                content : 'Parking 2',
+              },
+              {
+                position: {lat: 14.829344, lng: 120.281612},
+                content : 'Parking 3',
+              },
+              {
+                position: {lat: 14.829287, lng: 120.281642},
+                content : 'Parking 4',
+              },
+              {
+                position: {lat: 14.829254, lng: 120.281658},
+                content : 'Parking 5',
+              },
+              {
+                position: {lat: 14.829220, lng: 120.281687},
+                content : 'Parking 6',
+              },
+              {
+                position: {lat: 14.829183, lng: 120.281699},
+                content : 'Parking 7',
+              },
+              {
+                position: {lat: 14.829137, lng: 120.281722},
+                content : 'Parking 8',
+              },
+              {
+                position: {lat: 14.829089, lng: 120.281755},
+                content : 'Parking 9',
+              },
+              {
+                position: {lat: 14.829055, lng: 120.281765},
+                content : 'Parking 10',
+              },
+        ];
+        spaces.forEach(function(space) {
+          let spaceMarker = new H.map.Marker(space.position, iconUrl);
+          map.addObject(spaceMarker);
+        });
+  }
 
   loadMap(){
     this.geolocation.getCurrentPosition().then((position) => {
@@ -161,6 +236,15 @@ export class HomePage {
             icon: icons[feature.type].icon,
             map: map
           });
+
+          let rec = new google.maps.Circle({
+            map: map,
+            radius: 3,
+            fillColor: '#AA0000',
+            strokeOpacity: 0,
+          });
+
+          rec.bindTo('center', parking, 'position');
 
           parking.addListener('click', function() {
               let render = new google.maps.DirectionsRenderer({'map' : null});
