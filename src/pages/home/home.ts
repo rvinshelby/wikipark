@@ -2,11 +2,13 @@ import { Component, ViewChild, ElementRef, Injectable, NgZone } from '@angular/c
 import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
 import { Geolocation, Geoposition } from '@ionic-native/geolocation';
 import { NavController } from 'ionic-angular';
+import { LocalNotifications } from '@ionic-native/local-notifications';
 import { Http } from '@angular/http';
 import 'rxjs/add/operator/map';
 
 declare var google;
 declare var H;
+declare var destination;
 
 @Component({
   selector: 'page-home',
@@ -14,7 +16,6 @@ declare var H;
 })
 export class HomePage {
   @ViewChild('map') mapElement: ElementRef;
-  @ViewChild('panel') panelElement: ElementRef;
   map: any;
   latLng: any;
   directionsDisplay: any;
@@ -22,19 +23,26 @@ export class HomePage {
   public lat: number = 0;
   public lng: number = 0;
   platform: any;
+  options: any;
 
-  constructor(private http: Http, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation) {
-    this.platform = new H.service.Platform({
-      'app_id': 'wAjra6V7CcDCPY6Nf1vK',
-      'app_code': '6vgqJ29azm2D7KVB3QbTFQ'
-    });
+  constructor(private localnotif: LocalNotifications, private http: Http, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation) {
+    this.localnotif.registerPermission();
+    if(this.localnotif.hasPermission()) {
+      this.localnotif.schedule({
+        id: 1,
+        text: 'test',
+        at: Date.now()
+      });
+    } else {
+      this.localnotif.registerPermission();
+    }
   }
 
   ionViewDidLoad(){
-    this.loadHereMap();
+    this.loadMap();
   }
 
-  updateMarker(marker) {
+  updateMarker(marker, map) {
 // Background Tracking
   let config = {
     desiredAccuracy: 0,
@@ -58,91 +66,23 @@ export class HomePage {
  
   this.backgroundGeolocation.start();
   
-  let options = {
-    frequency: 3000, 
+  this.options = {
+    frequency: 1000, 
     enableHighAccuracy: true
   };
   
-  this.watch = this.geolocation.watchPosition(options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
+  this.watch = this.geolocation.watchPosition(this.options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
     this.zone.run(() => {
       this.lat = position.coords.latitude;
       this.lng = position.coords.longitude;
       marker.setPosition({lat: position.coords.latitude , lng: position.coords.longitude});
+      map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
       this.markParkingSpaces(this.map, this.lat, this.lng);
+      console.log('testtest');
     });
   });
   
 }
-
-  loadHereMap() {
-    this.geolocation.getCurrentPosition().then((position) => {
-      console.log(position);
-     let maptypes = this.platform.createDefaultLayers();
-     this.map = new H.Map(
-       this.mapElement.nativeElement,
-       maptypes.satellite.map,
-        {   
-          zoom: 18,
-          center: { lng: position.coords.longitude, lat: position.coords.latitude }
-        }
-     );
-     let behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(this.map))
-     let marker = new H.map.Marker({lat: position.coords.latitude, lng: position.coords.longitude});
-     this.map.addObject(marker);
-     this.updateMarker(marker);
-     this.addParkingMarker(this.map);
-    });
-  }
-
-  addParkingMarker(map) {
-    let iconUrl = new H.map.Icon('https://maps.google.com/mapfiles/kml/shapes/parking_lot_maps.png');
-    let spaces = [
-              {
-                position:{lat: 14.829424, lng: 120.281571},
-                content : 'Parking 1',
-              },
-              {
-                position: {lat: 14.829389, lng: 120.281588},
-                content : 'Parking 2',
-              },
-              {
-                position: {lat: 14.829344, lng: 120.281612},
-                content : 'Parking 3',
-              },
-              {
-                position: {lat: 14.829287, lng: 120.281642},
-                content : 'Parking 4',
-              },
-              {
-                position: {lat: 14.829254, lng: 120.281658},
-                content : 'Parking 5',
-              },
-              {
-                position: {lat: 14.829220, lng: 120.281687},
-                content : 'Parking 6',
-              },
-              {
-                position: {lat: 14.829183, lng: 120.281699},
-                content : 'Parking 7',
-              },
-              {
-                position: {lat: 14.829137, lng: 120.281722},
-                content : 'Parking 8',
-              },
-              {
-                position: {lat: 14.829089, lng: 120.281755},
-                content : 'Parking 9',
-              },
-              {
-                position: {lat: 14.829055, lng: 120.281765},
-                content : 'Parking 10',
-              },
-        ];
-        spaces.forEach(function(space) {
-          let spaceMarker = new H.map.Marker(space.position, iconUrl);
-          map.addObject(spaceMarker);
-        });
-  }
 
   loadMap(){
     this.geolocation.getCurrentPosition().then((position) => {
@@ -150,7 +90,8 @@ export class HomePage {
     let mapOptions = {
       center: this.latLng,
       zoom: 18,
-      mapTypeId: google.maps.MapTypeId.ROADMAP
+      mapTypeId: google.maps.MapTypeId.ROADMAP,
+      disableDefaultUI: true
     }
 
     this.map = new google.maps.Map(this.mapElement.nativeElement, mapOptions);
@@ -159,7 +100,7 @@ export class HomePage {
         animation: google.maps.Animation.DROP,
         position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude)
       });
-    this.updateMarker(marker);
+    this.updateMarker(marker, this.map);
     }, (err) => {
       console.log(err);
     });
@@ -227,13 +168,13 @@ export class HomePage {
             }
           };
 
-       features.forEach(function(feature) {
+       for (let i in features) {
           let infowindow = new google.maps.InfoWindow({
-              content: feature.content
+              content: features[i].content
           });
           let parking = new google.maps.Marker({
-            position: feature.position,
-            icon: icons[feature.type].icon,
+            position: features[i].position,
+            icon: icons[features[i].type].icon,
             map: map
           });
 
@@ -253,7 +194,7 @@ export class HomePage {
               let service = new google.maps.DirectionsService();
               let request = {
                   origin: new google.maps.LatLng(lat, lng),
-                  destination: feature.position,
+                  destination: features[i].position,
                   travelMode: google.maps.TravelMode.DRIVING
               };
               service.route(request, function(response, status) {
@@ -265,6 +206,6 @@ export class HomePage {
               });
             infowindow.open(map, parking);
           });
-        });
+        };
       }
 }

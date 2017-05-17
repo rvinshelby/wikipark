@@ -15,6 +15,18 @@ import { HttpModule } from '@angular/http';
 import { LocationTracker } from '../providers/location-tracker';
 import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
 import { Geolocation } from '@ionic-native/geolocation';
+import { LocalNotifications } from '@ionic-native/local-notifications';
+
+import { AngularFireModule } from 'angularfire2';
+
+export const firebaseConfig = {
+    apiKey: "AIzaSyAKa2V4EktDI4TiP1XhghhSyih37XxLDFQ",
+    authDomain: "wikipark-39c42.firebaseapp.com",
+    databaseURL: "https://wikipark-39c42.firebaseio.com",
+    projectId: "wikipark-39c42",
+    storageBucket: "wikipark-39c42.appspot.com",
+    messagingSenderId: "340333816177"
+};
 
 @NgModule({
   declarations: [
@@ -27,7 +39,8 @@ import { Geolocation } from '@ionic-native/geolocation';
   imports: [
     BrowserModule,
     HttpModule,
-    IonicModule.forRoot(MyApp)
+    IonicModule.forRoot(MyApp),
+    AngularFireModule.initializeApp(firebaseConfig)
   ],
   bootstrap: [IonicApp],
   entryComponents: [
@@ -38,6 +51,7 @@ import { Geolocation } from '@ionic-native/geolocation';
     TabsPage
   ],
   providers: [
+    LocalNotifications,
     LocationTracker,
     BackgroundGeolocation,
     Geolocation,
