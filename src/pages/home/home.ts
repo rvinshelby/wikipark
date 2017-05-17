@@ -4,11 +4,11 @@ import { Geolocation, Geoposition } from '@ionic-native/geolocation';
 import { NavController } from 'ionic-angular';
 import { LocalNotifications } from '@ionic-native/local-notifications';
 import { Http } from '@angular/http';
+import { AngularFireDatabase, FirebaseListObservable } from 'angularfire2/database';
 import 'rxjs/add/operator/map';
 
 declare var google;
 declare var H;
-declare var destination;
 
 @Component({
   selector: 'page-home',
@@ -18,14 +18,15 @@ export class HomePage {
   @ViewChild('map') mapElement: ElementRef;
   map: any;
   latLng: any;
-  directionsDisplay: any;
   public watch: any;
   public lat: number = 0;
   public lng: number = 0;
   platform: any;
   options: any;
+  public destination: any;
+  items: FirebaseListObservable<any[]>;
 
-  constructor(private localnotif: LocalNotifications, private http: Http, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation) {
+  constructor(private localnotif: LocalNotifications, private http: Http, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation, private db: AngularFireDatabase) {
     this.localnotif.registerPermission();
     if(this.localnotif.hasPermission()) {
       this.localnotif.schedule({
@@ -70,7 +71,7 @@ export class HomePage {
     frequency: 1000, 
     enableHighAccuracy: true
   };
-  
+  let render = new google.maps.DirectionsRenderer();
   this.watch = this.geolocation.watchPosition(this.options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
     this.zone.run(() => {
       this.lat = position.coords.latitude;
@@ -78,7 +79,13 @@ export class HomePage {
       marker.setPosition({lat: position.coords.latitude , lng: position.coords.longitude});
       map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
       this.markParkingSpaces(this.map, this.lat, this.lng);
-      console.log('testtest');
+      if(this.destination == null)
+      {
+        console.log('huhu');
+      } else {
+        console.log('working');
+        this.renderRoute(new google.maps.LatLng(this.lat, this.lng), this.destination);
+      }
     });
   });
   
@@ -167,11 +174,8 @@ export class HomePage {
               icon: iconBase + 'parking_lot_maps.png'
             }
           };
-
+      let des;
        for (let i in features) {
-          let infowindow = new google.maps.InfoWindow({
-              content: features[i].content
-          });
           let parking = new google.maps.Marker({
             position: features[i].position,
             icon: icons[features[i].type].icon,
@@ -186,11 +190,13 @@ export class HomePage {
           });
 
           rec.bindTo('center', parking, 'position');
-
           parking.addListener('click', function() {
-              let render = new google.maps.DirectionsRenderer({'map' : null});
+            this.destination = features[i].position;
+            let render = new google.maps.DirectionsRenderer();
+              render.setMap(null);
+              render = null;
+              render = new google.maps.DirectionsRenderer();
               render.setMap(this.map);
-              render.setPanel(this.panelElement);
               let service = new google.maps.DirectionsService();
               let request = {
                   origin: new google.maps.LatLng(lat, lng),
@@ -204,8 +210,44 @@ export class HomePage {
                   console.log(status);
                 }
               });
-            infowindow.open(map, parking);
+              des = parking.destination;
+              console.log(des);
+            new google.maps.InfoWindow({
+                content: features[i].content
+            }).open(map, parking);
           });
         };
+        console.log(des);
+        this.destination = des;
+        this.watch = this.geolocation.watchPosition(this.options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
+          this.zone.run(() => {
+            this.lat = position.coords.latitude;
+            this.lng = position.coords.longitude;
+            // console.log(this.destination);
+          });
+        });
+        
       }
+
+    renderRoute(pos, des)
+    {
+      let render = new google.maps.DirectionsRenderer();
+      render.setMap(null);
+      render = null;
+      render = new google.maps.DirectionsRenderer();
+      render.setMap(this.map);
+      let service = new google.maps.DirectionsService();
+      let request = {
+          origin: pos,
+          destination: des,
+          travelMode: google.maps.TravelMode.DRIVING
+      };
+      service.route(request, function(response, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+          render.setDirections(response);
+        } else {
+          console.log(status);
+        }
+      });
+    }
 }
