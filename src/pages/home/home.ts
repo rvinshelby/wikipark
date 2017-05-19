@@ -5,6 +5,7 @@ import { NavController } from 'ionic-angular';
 import { LocalNotifications } from '@ionic-native/local-notifications';
 import { Http } from '@angular/http';
 import { AngularFireDatabase, FirebaseListObservable } from 'angularfire2/database';
+import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/map';
 
 declare var google;
@@ -23,10 +24,12 @@ export class HomePage {
   public lng: number = 0;
   platform: any;
   options: any;
+  parkingspaces: any;
   public destination: any;
   items: FirebaseListObservable<any[]>;
 
   constructor(private localnotif: LocalNotifications, private http: Http, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation, private db: AngularFireDatabase) {
+    this.items = db.list('/parking_spaces');
     this.localnotif.registerPermission();
     if(this.localnotif.hasPermission()) {
       this.localnotif.schedule({
@@ -71,14 +74,18 @@ export class HomePage {
     frequency: 1000, 
     enableHighAccuracy: true
   };
-  let render = new google.maps.DirectionsRenderer();
+  let spaces;
   this.watch = this.geolocation.watchPosition(this.options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
     this.zone.run(() => {
       this.lat = position.coords.latitude;
       this.lng = position.coords.longitude;
       marker.setPosition({lat: position.coords.latitude , lng: position.coords.longitude});
       map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
-      this.markParkingSpaces(this.map, this.lat, this.lng);
+      this.items.subscribe(parking_spaces => {
+        spaces = parking_spaces;
+      });
+      console.log(spaces);
+      this.markParkingSpaces(this.map, this.lat, this.lng, spaces);
       if(this.destination == null)
       {
         console.log('huhu');
@@ -113,61 +120,8 @@ export class HomePage {
     });
   }
 
-    markParkingSpaces(map, lat, lng){
+    markParkingSpaces(map, lat, lng, spaces){
       let iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
-      let features = [
-              {
-                position: new google.maps.LatLng(14.829424, 120.281571),
-                type: 'parking',
-                content : 'Parking 1',
-              },
-              {
-                position: new google.maps.LatLng(14.829389, 120.281588),
-                type: 'parking',
-                content : 'Parking 2',
-              },
-              {
-                position: new google.maps.LatLng(14.829344, 120.281612),
-                type: 'parking',
-                content : 'Parking 3',
-              },
-              {
-                position: new google.maps.LatLng(14.829287, 120.281642),
-                type: 'parking',
-                content : 'Parking 4',
-              },
-              {
-                position: new google.maps.LatLng(14.829254, 120.281658),
-                type: 'parking',
-                content : 'Parking 5',
-              },
-              {
-                position: new google.maps.LatLng(14.829220, 120.281687),
-                type: 'parking',
-                content : 'Parking 6',
-              },
-              {
-                position: new google.maps.LatLng(14.829183, 120.281699),
-                type: 'parking',
-                content : 'Parking 7',
-              },
-              {
-                position: new google.maps.LatLng(14.829137, 120.281722),
-                type: 'parking',
-                content : 'Parking 8',
-              },
-              {
-                position: new google.maps.LatLng(14.829089, 120.281755),
-                type: 'parking',
-                content : 'Parking 9',
-              },
-              {
-                position: new google.maps.LatLng(14.829055, 120.281765),
-                type: 'parking',
-                content : 'Parking 10',
-              },
-        ];
-
       let icons = {
             parking: {
               name: 'Parking',
@@ -175,10 +129,10 @@ export class HomePage {
             }
           };
       let des;
-       for (let i in features) {
+       for (let i in spaces) {
           let parking = new google.maps.Marker({
-            position: features[i].position,
-            icon: icons[features[i].type].icon,
+            position: spaces[i].position,
+            icon: icons[spaces[i].type].icon,
             map: map
           });
 
@@ -191,7 +145,7 @@ export class HomePage {
 
           rec.bindTo('center', parking, 'position');
           parking.addListener('click', function() {
-            this.destination = features[i].position;
+            this.destination = spaces[i].position;
             let render = new google.maps.DirectionsRenderer();
               render.setMap(null);
               render = null;
@@ -200,7 +154,7 @@ export class HomePage {
               let service = new google.maps.DirectionsService();
               let request = {
                   origin: new google.maps.LatLng(lat, lng),
-                  destination: features[i].position,
+                  destination: spaces[i].position,
                   travelMode: google.maps.TravelMode.DRIVING
               };
               service.route(request, function(response, status) {
@@ -213,7 +167,7 @@ export class HomePage {
               des = parking.destination;
               console.log(des);
             new google.maps.InfoWindow({
-                content: features[i].content
+                content: spaces[i].content
             }).open(map, parking);
           });
         };
