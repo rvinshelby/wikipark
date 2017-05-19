@@ -74,7 +74,6 @@ export class HomePage {
     frequency: 1000, 
     enableHighAccuracy: true
   };
-  let spaces;
   this.watch = this.geolocation.watchPosition(this.options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
     this.zone.run(() => {
       this.lat = position.coords.latitude;
@@ -82,17 +81,8 @@ export class HomePage {
       marker.setPosition({lat: position.coords.latitude , lng: position.coords.longitude});
       map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
       this.items.subscribe(parking_spaces => {
-        spaces = parking_spaces;
+        this.markParkingSpaces(this.map, this.lat, this.lng, parking_spaces);
       });
-      console.log(spaces);
-      this.markParkingSpaces(this.map, this.lat, this.lng, spaces);
-      if(this.destination == null)
-      {
-        console.log('huhu');
-      } else {
-        console.log('working');
-        this.renderRoute(new google.maps.LatLng(this.lat, this.lng), this.destination);
-      }
     });
   });
   
@@ -128,10 +118,9 @@ export class HomePage {
               icon: iconBase + 'parking_lot_maps.png'
             }
           };
-      let des;
        for (let i in spaces) {
           let parking = new google.maps.Marker({
-            position: spaces[i].position,
+            position:  new google.maps.LatLng(spaces[i].lat, spaces[i].lng),
             icon: icons[spaces[i].type].icon,
             map: map
           });
@@ -145,7 +134,6 @@ export class HomePage {
 
           rec.bindTo('center', parking, 'position');
           parking.addListener('click', function() {
-            this.destination = spaces[i].position;
             let render = new google.maps.DirectionsRenderer();
               render.setMap(null);
               render = null;
@@ -154,7 +142,7 @@ export class HomePage {
               let service = new google.maps.DirectionsService();
               let request = {
                   origin: new google.maps.LatLng(lat, lng),
-                  destination: spaces[i].position,
+                  destination: new google.maps.LatLng(spaces[i].lat, spaces[i].lng),
                   travelMode: google.maps.TravelMode.DRIVING
               };
               service.route(request, function(response, status) {
@@ -164,15 +152,11 @@ export class HomePage {
                   console.log(status);
                 }
               });
-              des = parking.destination;
-              console.log(des);
             new google.maps.InfoWindow({
                 content: spaces[i].content
             }).open(map, parking);
           });
         };
-        console.log(des);
-        this.destination = des;
         this.watch = this.geolocation.watchPosition(this.options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
           this.zone.run(() => {
             this.lat = position.coords.latitude;
