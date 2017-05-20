@@ -6,15 +6,21 @@
 -->
 <ion-header>
 
-  <ion-navbar>
+  <ion-navbar hideBackButton >
     <ion-title>login</ion-title>
   </ion-navbar>
 
 </ion-header>
 
 
-<ion-content>
- <ion-input type="text" name="email" [(ngModel)]="email" placeholder="email"></ion-input>
- <ion-input type="password" name="password" [(ngModel)]="password" placeholder="password"></ion-input>
- <button ion-button round block (click)="login()">Login</button>
+<ion-content padding>
+  <ion-item>
+    <ion-label stacked>Username</ion-label>
+    <ion-input type="text" name="email" [(ngModel)]="email" placeholder=""></ion-input>
+  </ion-item>
+ <ion-item>
+  <ion-label stacked>Password</ion-label>
+  <ion-input type="password" name="password" [(ngModel)]="password" placeholder=""></ion-input>
+ </ion-item>
+ <button ion-button full (click)="login()">Login</button>
 </ion-content>

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
-import { IonicPage, NavController, NavParams } from 'ionic-angular';
+import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
 import { AngularFireAuth } from 'angularfire2/auth';
+
 
 /**
  * Generated class for the Login page.
@@ -16,15 +17,30 @@ import { AngularFireAuth } from 'angularfire2/auth';
 export class Login {
 email: any;
 password: any;
-  constructor(public navCtrl: NavController, public navParams: NavParams, private auth: AngularFireAuth) {
-    this.auth.auth.signInWithEmailAndPassword(this.email, this.password).then(function(){
-        console.log('success');
-    }).catch(function(e){
-        console.log(e);
-    });
+  constructor(public navCtrl: NavController, public navParams: NavParams, private auth: AngularFireAuth, private alertCtrl: AlertController) {
+
   }
 
   ionViewDidLoad() {
     console.log('ionViewDidLoad Login');
+  }
+
+  login() {
+        this.auth.auth.signInWithEmailAndPassword(this.email, this.password).then((response) => {
+        let currentuser = {
+          uid : response.uid,
+          email : response.email,
+          password : response.photoURL
+        };
+        window.localStorage.setItem('currentuser', JSON.stringify(currentuser));
+        this.navCtrl.pop();
+    }).catch((e) => {
+        let alert = this.alertCtrl.create({
+          title : 'Oops something went wrong!',
+          subTitle : e.message,
+          buttons : ['Dismiss']
+        });
+        alert.present();
+    });
   }
 }

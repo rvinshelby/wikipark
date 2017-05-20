@@ -3,7 +3,6 @@ import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
 import { Geolocation, Geoposition } from '@ionic-native/geolocation';
 import { NavController } from 'ionic-angular';
 import { LocalNotifications } from '@ionic-native/local-notifications';
-import { Http } from '@angular/http';
 import { AngularFireDatabase, FirebaseListObservable } from 'angularfire2/database';
 import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/map';
@@ -28,7 +27,7 @@ export class HomePage {
   public destination: any;
   items: FirebaseListObservable<any[]>;
 
-  constructor(private localnotif: LocalNotifications, private http: Http, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation, private db: AngularFireDatabase) {
+  constructor(private localnotif: LocalNotifications, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation, private db: AngularFireDatabase) {
     this.items = db.list('/parking_spaces');
     this.localnotif.registerPermission();
     if(this.localnotif.hasPermission()) {
@@ -133,38 +132,20 @@ export class HomePage {
           });
 
           rec.bindTo('center', parking, 'position');
-          parking.addListener('click', function() {
-            let render = new google.maps.DirectionsRenderer();
-              render.setMap(null);
-              render = null;
-              render = new google.maps.DirectionsRenderer();
-              render.setMap(this.map);
-              let service = new google.maps.DirectionsService();
-              let request = {
-                  origin: new google.maps.LatLng(lat, lng),
-                  destination: new google.maps.LatLng(spaces[i].lat, spaces[i].lng),
-                  travelMode: google.maps.TravelMode.DRIVING
-              };
-              service.route(request, function(response, status) {
-                if (status == google.maps.DirectionsStatus.OK) {
-                  render.setDirections(response);
-                } else {
-                  console.log(status);
-                }
-              });
-            new google.maps.InfoWindow({
-                content: spaces[i].content
-            }).open(map, parking);
+          parking.addListener('click', () => {
+            let pos = new google.maps.LatLng(lat, lng);
+            if(spaces[i].state == 1) {
+              this.renderRoute(pos, parking.position);
+              new google.maps.InfoWindow({
+                  content: spaces[i].content
+              }).open(map, parking);
+            } else {
+              new google.maps.InfoWindow({
+                  content: spaces[i].content + ' is not Available'
+              }).open(map, parking);
+            }
           });
         };
-        this.watch = this.geolocation.watchPosition(this.options).filter((p: any) => p.code === undefined).subscribe((position: Geoposition) => {
-          this.zone.run(() => {
-            this.lat = position.coords.latitude;
-            this.lng = position.coords.longitude;
-            // console.log(this.destination);
-          });
-        });
-        
       }
 
     renderRoute(pos, des)

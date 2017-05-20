@@ -3,9 +3,26 @@
     <ion-title>
       Attendant
     </ion-title>
+<ion-buttons end>
+<button ion-button (click)="signOut()">
+Sign Out
+</button>
+</ion-buttons>
   </ion-navbar>
 </ion-header>
 
 <ion-content>
-
+  <ion-list>
+    <ion-item-sliding #item *ngFor="let space of parkingspaces">
+      <ion-item [ngClass]="{'avail' : (space.state == 1), 'not_avail' : (space.state == 0)}">
+        {{space.content}}
+      </ion-item>
+      <ion-item-options side="left">
+        <button ion-button [disabled]="isAvailable(space)" color="secondary" (click)="setAvail(space)">Available</button>
+      </ion-item-options>
+      <ion-item-options side="right">
+        <button ion-button [disabled]="isNotAvailable(space)" color="danger" (click)="setNotAvail(space)">Not Available</button>
+      </ion-item-options>
+    </ion-item-sliding>
+  </ion-list>
 </ion-content>
