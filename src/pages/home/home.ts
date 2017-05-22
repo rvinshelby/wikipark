@@ -7,6 +7,7 @@ import { AngularFireDatabase, FirebaseListObservable, FirebaseObjectObservable  
 import { Subject } from 'rxjs/Subject';
 import { PushNotificationsService  } from 'angular2-notifications';
 import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/filter';
 
 declare var google;
 declare var H;
@@ -102,12 +103,12 @@ export class HomePage {
               if(!this.triggered)
               {
                 alert('test');
+                this._service.create('Parking Space Occupied', {body : route[0].content + ' has been occupied'}).subscribe(
+                  res => console.log(res),
+                  err => console.log(err)
+                );
                 this.triggered = true;
               }
-              this._service.create('Parking Space Occupied', {body : route[0].content + ' has been occupied'}).subscribe(
-                res => console.log(res),
-                err => console.log(err)
-              );
               map.event.trigger(map, 'resize');
             } else {
               this.triggered = false;
