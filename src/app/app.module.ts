@@ -1,5 +1,6 @@
 import { NgModule, ErrorHandler } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { IonicApp, IonicModule, IonicErrorHandler } from 'ionic-angular';
 import { MyApp } from './app.component';
 
@@ -21,6 +22,8 @@ import { LocalNotifications } from '@ionic-native/local-notifications';
 import { AngularFireModule } from 'angularfire2';
 import { AngularFireDatabaseModule } from 'angularfire2/database';
 import { AngularFireAuthModule } from 'angularfire2/auth';
+
+import { SimpleNotificationsModule, PushNotificationsModule } from 'angular2-notifications';
 
 export const firebaseConfig = {
     apiKey: "AIzaSyAKa2V4EktDI4TiP1XhghhSyih37XxLDFQ",
@@ -47,6 +50,9 @@ export const firebaseConfig = {
     AngularFireModule.initializeApp(firebaseConfig),
     AngularFireDatabaseModule,
     AngularFireAuthModule,
+    BrowserAnimationsModule,
+    SimpleNotificationsModule.forRoot(),
+    PushNotificationsModule,
   ],
   bootstrap: [IonicApp],
   entryComponents: [

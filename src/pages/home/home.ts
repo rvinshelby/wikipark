@@ -3,8 +3,9 @@ import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
 import { Geolocation, Geoposition } from '@ionic-native/geolocation';
 import { NavController } from 'ionic-angular';
 import { LocalNotifications } from '@ionic-native/local-notifications';
-import { AngularFireDatabase, FirebaseListObservable } from 'angularfire2/database';
+import { AngularFireDatabase, FirebaseListObservable, FirebaseObjectObservable  } from 'angularfire2/database';
 import { Subject } from 'rxjs/Subject';
+import { PushNotificationsService  } from 'angular2-notifications';
 import 'rxjs/add/operator/map';
 
 declare var google;
@@ -23,29 +24,23 @@ export class HomePage {
   public lng: number = 0;
   platform: any;
   options: any;
-  parkingspaces: any;
-  public destination: any;
   items: FirebaseListObservable<any[]>;
+  item: FirebaseObjectObservable<any>;
+  triggered: any;
 
-  constructor(private localnotif: LocalNotifications, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation, private db: AngularFireDatabase) {
+  constructor(private localnotif: LocalNotifications, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation, private db: AngularFireDatabase, private _service: PushNotificationsService  ) {
+    this.triggered = true;
+    if(!this._service.isSupported()) { this._service.requestPermission() }
+    window.localStorage.clear();
     this.items = db.list('/parking_spaces');
-    this.localnotif.registerPermission();
-    if(this.localnotif.hasPermission()) {
-      this.localnotif.schedule({
-        id: 1,
-        text: 'test',
-        at: Date.now()
-      });
-    } else {
-      this.localnotif.registerPermission();
-    }
   }
 
   ionViewDidLoad(){
+    window.localStorage.clear();
     this.loadMap();
   }
 
-  updateMarker(marker, map) {
+  updateMarker(marker, map, route = null) {
 // Background Tracking
   let config = {
     desiredAccuracy: 0,
@@ -78,13 +73,51 @@ export class HomePage {
       this.lat = position.coords.latitude;
       this.lng = position.coords.longitude;
       marker.setPosition({lat: position.coords.latitude , lng: position.coords.longitude});
-      map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
+      // map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
       this.items.subscribe(parking_spaces => {
         this.markParkingSpaces(this.map, this.lat, this.lng, parking_spaces);
       });
     });
   });
-  
+        if(window.localStorage.getItem('enroute') !== null)
+        {
+          let route = JSON.parse(window.localStorage.getItem('enroute'));
+          this.item = this.db.object('/parking_spaces/' + route[1]);
+          this.item.subscribe(parking_space => {
+            var curpos = new google.maps.LatLng(this.lat, this.lng);
+            var enroute_pos = new google.maps.LatLng(route[0].lat, route[0].lng);
+            var circ_rad = window.localStorage.getItem('circle_radius');
+            if(this.checkInside(curpos, enroute_pos, circ_rad)) {
+              window.localStorage.clear();
+              alert('You are now parked');
+              this._service.create('You are now parked').subscribe(
+                res => console.log(res),
+                err => console.log(err)
+              );
+             map.event.trigger(map, 'resize');
+            }
+            if(route[0].state !== parking_space.state)
+            {
+              window.localStorage.clear();
+              if(!this.triggered)
+              {
+                alert('test');
+                this.triggered = true;
+              }
+              this._service.create('Parking Space Occupied', {body : route[0].content + ' has been occupied'}).subscribe(
+                res => console.log(res),
+                err => console.log(err)
+              );
+              map.event.trigger(map, 'resize');
+            } else {
+              this.triggered = false;
+            }
+          });
+        }
+}
+
+checkInside(point, center, radius) {
+  return (google.maps.geometry.spherical.computeDistanceBetween(point, center) <= radius)
 }
 
   loadMap(){
@@ -110,34 +143,36 @@ export class HomePage {
   }
 
     markParkingSpaces(map, lat, lng, spaces){
-      let iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
-      let icons = {
-            parking: {
-              name: 'Parking',
-              icon: iconBase + 'parking_lot_maps.png'
-            }
-          };
        for (let i in spaces) {
           let parking = new google.maps.Marker({
             position:  new google.maps.LatLng(spaces[i].lat, spaces[i].lng),
-            icon: icons[spaces[i].type].icon,
             map: map
           });
-
-          let rec = new google.maps.Circle({
+          if(spaces[i].state == 1)
+          {
+            parking.setIcon('https://firebasestorage.googleapis.com/v0/b/wikipark-39c42.appspot.com/o/parking_avail.png?alt=media&token=aee13194-9d1a-47d7-b6db-6062416c851a');
+          } else {
+            parking.setIcon('https://firebasestorage.googleapis.com/v0/b/wikipark-39c42.appspot.com/o/parking_not_avail.png?alt=media&token=2a49dfb1-6f78-4f69-a070-baedcc7ca8af');
+          }
+          parking.addListener('click', () => {
+          let circle = new google.maps.Circle({
             map: map,
             radius: 3,
-            fillColor: '#AA0000',
+            fillOpacity: 0,
             strokeOpacity: 0,
           });
-
-          rec.bindTo('center', parking, 'position');
-          parking.addListener('click', () => {
+          window.localStorage.setItem('enroute', JSON.stringify([spaces[i], spaces[i].$key]));
+          window.localStorage.setItem('circle_radius', circle.radius);
+          circle.bindTo('center', parking, 'position');
             let pos = new google.maps.LatLng(lat, lng);
             if(spaces[i].state == 1) {
               this.renderRoute(pos, parking.position);
+              if(window.localStorage.getItem('currentuser') == null)
+              {
+                this.renderRoute(pos, parking.position);
+              }
               new google.maps.InfoWindow({
-                  content: spaces[i].content
+                  content: spaces[i].content + ' is Available'
               }).open(map, parking);
             } else {
               new google.maps.InfoWindow({
@@ -161,6 +196,7 @@ export class HomePage {
           destination: des,
           travelMode: google.maps.TravelMode.DRIVING
       };
+
       service.route(request, function(response, status) {
         if (status == google.maps.DirectionsStatus.OK) {
           render.setDirections(response);
