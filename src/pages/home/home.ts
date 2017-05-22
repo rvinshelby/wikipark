@@ -32,12 +32,11 @@ export class HomePage {
   constructor(private localnotif: LocalNotifications, public navCtrl: NavController, public zone: NgZone, private geolocation: Geolocation, private backgroundGeolocation: BackgroundGeolocation, private db: AngularFireDatabase, private _service: PushNotificationsService  ) {
     this.triggered = true;
     if(!this._service.isSupported()) { this._service.requestPermission() }
-    window.localStorage.clear();
+    if(window.localStorage.getItem('enroute') !== null) { window.localStorage.removeItem('enroute'); window.localStorage.removeItem('circle_rad'); }
     this.items = db.list('/parking_spaces');
   }
 
   ionViewDidLoad(){
-    window.localStorage.clear();
     this.loadMap();
   }
 
@@ -78,8 +77,6 @@ export class HomePage {
       this.items.subscribe(parking_spaces => {
         this.markParkingSpaces(this.map, this.lat, this.lng, parking_spaces);
       });
-    });
-  });
         if(window.localStorage.getItem('enroute') !== null)
         {
           let route = JSON.parse(window.localStorage.getItem('enroute'));
@@ -88,33 +85,36 @@ export class HomePage {
             var curpos = new google.maps.LatLng(this.lat, this.lng);
             var enroute_pos = new google.maps.LatLng(route[0].lat, route[0].lng);
             var circ_rad = window.localStorage.getItem('circle_radius');
+            if(route[0].state !== parking_space.state)
+            {
+              if(this.triggered)
+              {
+                console.log(parking_space);
+                alert(route[0].content + ' has been occupied');
+                this._service.create('Parking Space Occupied', {body : route[0].content + ' has been occupied'}).subscribe(
+                  res => console.log(res),
+                  err => console.log(err)
+                );
+                this.triggered = false;
+              }
+              google.maps.event.trigger(map, 'resize');
+            } else {
+              this.triggered = true;
+            }
             if(this.checkInside(curpos, enroute_pos, circ_rad)) {
-              window.localStorage.clear();
               alert('You are now parked');
               this._service.create('You are now parked').subscribe(
                 res => console.log(res),
                 err => console.log(err)
               );
-             map.event.trigger(map, 'resize');
-            }
-            if(route[0].state !== parking_space.state)
-            {
-              window.localStorage.clear();
-              if(!this.triggered)
-              {
-                alert('test');
-                this._service.create('Parking Space Occupied', {body : route[0].content + ' has been occupied'}).subscribe(
-                  res => console.log(res),
-                  err => console.log(err)
-                );
-                this.triggered = true;
-              }
-              map.event.trigger(map, 'resize');
-            } else {
-              this.triggered = false;
+              window.localStorage.removeItem('circle_radius');
+              window.localStorage.removeItem('enroute');
+              google.maps.event.trigger(this.map, 'resize');
             }
           });
         }
+    });
+  });
 }
 
 checkInside(point, center, radius) {
